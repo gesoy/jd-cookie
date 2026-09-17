@@ -1,10 +1,34 @@
 const BASE = 'http://127.0.0.1:17320'
 
 let token = ''
-// 尝试从同目录读取 token（file:// 加载时有效），失败则不启用 token
-fetch('token.txt').then(r => r.text()).then(t => { token = t.trim() }).catch(() => {})
+let tokenReady = false
+// 优先从后端取得鉴权令牌（本机回环监听，无需 cookie/跨域）；取不到则用同源 token.txt，
+// 仍失败则不再携带 token，仅能访问免鉴权接口。
+;(async () => {
+  try {
+    const res = await fetch(BASE + '/api/token')
+    if (res.ok) {
+      const body = await res.json()
+      if (body && body.code === 0) { token = String(body.data || '').trim(); return }
+    }
+  } catch (e) {}
+  try {
+    token = (await fetch('token.txt').then(r => r.text())).trim()
+  } catch (e) {}
+})()
+  .catch(() => {})
+  .finally(() => { tokenReady = true })
+
+// 等待 token 初始化完成（最多 3s），避免请求与 token 读取竞态
+async function ensureToken() {
+  const deadline = Date.now() + 3000
+  while (!tokenReady && Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 30))
+  }
+}
 
 async function request(url, options = {}) {
+  await ensureToken()
   if (token) {
     options.headers = options.headers || {}
     options.headers['X-Token'] = token

@@ -11,6 +11,9 @@ const cfgUrl = ref('')
 const cfgUser = ref('')
 const cfgPass = ref('')
 const cfgEnv = ref('JD_COOKIE')
+const cfgForce = ref(0)
+const cfgWxToken = ref('')
+const cfgWxUID = ref('')
 const busyRead = ref(false)
 const busyUploadOnly = ref(false)
 const busyTest = ref(false)
@@ -60,7 +63,7 @@ onMounted(async () => {
 
   uptimeTimer = setInterval(tickUptime, 1000)
 
-  try { const c = await api.getConfig(); cfgUrl.value = c.ql_url || ''; cfgUser.value = c.ql_user || ''; cfgPass.value = c.ql_pass || ''; cfgEnv.value = c.env_name || 'JD_COOKIE' } catch (e) {}
+  try { const c = await api.getConfig(); cfgUrl.value = c.ql_url || ''; cfgUser.value = c.ql_user || ''; cfgPass.value = c.ql_pass || ''; cfgEnv.value = c.env_name || 'JD_COOKIE'; cfgForce.value = c.force_hours || 0; cfgWxToken.value = c.wx_token || ''; cfgWxUID.value = c.wx_uid || '' } catch (e) {}
 
   nextTick(() => {
     es = logStream(line => {
@@ -94,7 +97,7 @@ async function doUploadOnly() {
 async function doSave() {
   if (!cfgUrl.value.trim() || !cfgUser.value.trim() || !cfgPass.value.trim()) { showToast('请填写面板地址、用户名和密码', false); return }
   busySave.value = true
-  try { await api.setConfig({ ql_url: cfgUrl.value.trim(), ql_user: cfgUser.value.trim(), ql_pass: cfgPass.value.trim(), env_name: cfgEnv.value.trim() || 'JD_COOKIE' }); showToast('保存成功') } catch (e) { showToast(e.message, false) }
+  try { await api.setConfig({ ql_url: cfgUrl.value.trim(), ql_user: cfgUser.value.trim(), ql_pass: cfgPass.value.trim(), env_name: cfgEnv.value.trim() || 'JD_COOKIE', force_hours: Number(cfgForce.value) || 0, wx_token: cfgWxToken.value.trim(), wx_uid: cfgWxUID.value.trim() }); showToast('保存成功') } catch (e) { showToast(e.message, false) }
   busySave.value = false
 }
 async function doTest() {
@@ -171,6 +174,15 @@ async function doClearLog() {
             </div>
             <label>变量名</label>
             <input v-model="cfgEnv" placeholder="JD_COOKIE">
+            <label>强制重传周期（小时）</label>
+            <input v-model="cfgForce" type="number" min="1" placeholder="0 = 默认 12 小时">
+            <div class="form-hint">Cookie 超过该时长未变化时强制覆盖上传，规避 pt_key 过期却不重传</div>
+            <div class="form-divider">Wxpusher 通知（可选）</div>
+            <label>AppToken</label>
+            <input v-model="cfgWxToken" placeholder="AT_xxxxxxxxxxxxx">
+            <label>接收 UID（多个用逗号分隔）</label>
+            <input v-model="cfgWxUID" placeholder="UID_xxxxxxxxxxxxx">
+            <div class="form-hint">上传成功 / 失败 / 强制重传时推送消息</div>
           </div>
           <div class="block-ft">
             <div class="ft-left">
@@ -327,6 +339,11 @@ body {
 .form input::placeholder { color: var(--tx3); }
 .form-row { display: flex; gap: 8px; }
 .form-col { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.form-hint { font-size: 10px; color: var(--tx3); line-height: 1.4; margin-top: -4px; }
+.form-divider {
+  margin: 6px 0 2px; padding-top: 8px; border-top: 1px dashed var(--brd2);
+  font-size: 11px; color: var(--tx2); font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
+}
 
 /* ===== Loading / Empty ===== */
 .loading { display: flex; align-items: center; gap: 8px; padding: 18px 0; color: var(--tx2); font-size: 12px; }

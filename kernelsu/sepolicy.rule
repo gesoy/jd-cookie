@@ -1,0 +1,38 @@
+# ============================================================
+# Magisk SELinux 策略注入
+# jd-cookie 守护进程由 Magisk 的 service.sh 启动，运行于 magisk 域。
+# 需要放行：读取京东 App WebView Cookie 数据库 + 监听本地端口 + 访问青龙面板。
+# ============================================================
+
+# --- 读取京东 App WebView Cookie 数据库 (/data/data/com.jingdong.app.mall/...) ---
+allow magisk untrusted_app_data_file dir { search read open getattr }
+allow magisk untrusted_app_data_file file { read open getattr ioctl }
+allow magisk system_app_data_file dir { search read open getattr }
+allow magisk system_app_data_file file { read open getattr ioctl }
+allow magisk platform_app_data_file dir { search read open getattr }
+allow magisk platform_app_data_file file { read open getattr ioctl }
+allow magisk app_data_file dir { search read open getattr }
+allow magisk app_data_file file { read open getattr ioctl }
+
+# --- 访问应用私有目录的父级目录链 ---
+allow magisk dalvikcache_data_file dir { search read open getattr }
+
+# --- 监听本地端口 (127.0.0.1:17320) ---
+allow magisk self tcp_socket { bind listen create read write getattr setopt accept }
+allow magisk node_type tcp_socket { node_bind }
+
+# --- 访问青龙面板的网络 (出站连接) ---
+allow magisk self tcp_socket { create read write connect getopt setopt shutdown }
+allow magisk self udp_socket { create read write connect }
+allow magisk self socket { create read write ioctl }
+allow magisk self dns_socket { create read write connect getopt }
+allow magisk self packet_socket { create read write }
+
+# --- 读写本模块 data.db ---
+allow magisk magisk_data_file file { read write open getattr append create unlink }
+allow magisk magisk_data_file dir { search read write open add_name remove_name getattr }
+
+# --- 普通文件/能力补充 ---
+allow magisk proc_net file { read open getattr }
+allow magisk proc file { read open getattr }
+allow magisk self capability { setuid setgid net_bind_service net_raw }

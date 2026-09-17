@@ -17,9 +17,13 @@ type qlResult struct {
 	Msg string `json:"msg"`
 }
 
+// httpCli 使用自定义 DNS/拨号逻辑，规避 Android /etc/resolv.conf 损坏导致的解析失败
 var httpCli = &http.Client{
-	Timeout:   15 * time.Second,
-	Transport: &http.Transport{IdleConnTimeout: 10 * time.Second},
+	Timeout: 20 * time.Second,
+	Transport: &http.Transport{
+		DialContext:     dialContext,
+		IdleConnTimeout: 10 * time.Second,
+	},
 }
 
 func doHTTP(method, url string, body interface{}, token string) (*http.Response, []byte, error) {
